@@ -1,0 +1,21 @@
+---
+- name: Update and install essential packages
+  hosts: all
+  become: yes
+  tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+
+    - name: Upgrade all packages
+      ansible.builtin.apt:
+        upgrade: dist
+
+    - name: Install essential packages
+      ansible.builtin.apt:
+        name:
+          - git
+          - curl
+          - vim
+          - htop
+        state: present

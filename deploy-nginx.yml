@@ -1,21 +1,23 @@
 ---
-- name: Update and install essential packages
-  hosts: all
+- name: Deploy Nginx with a random page
+  hosts: web_servers
   become: yes
   tasks:
-    - name: Update apt cache
+    - name: Install Nginx
       ansible.builtin.apt:
-        update_cache: yes
-
-    - name: Upgrade all packages
-      ansible.builtin.apt:
-        upgrade: dist
-
-    - name: Install essential packages
-      ansible.builtin.apt:
-        name:
-          - git
-          - curl
-          - vim
-          - htop
+        name: nginx
         state: present
+
+    - name: Create index.html with random content
+      ansible.builtin.copy:
+        dest: /var/www/html/index.html
+        content: "Benvenuto, goblin {{ 100 + ansible_date_time.epoch | int % 100 }}!"
+        owner: www-data
+        group: www-data
+        mode: '0644'
+
+    - name: Ensure Nginx is running
+      ansible.builtin.service:
+        name: nginx
+        state: started
+        enabled: yes

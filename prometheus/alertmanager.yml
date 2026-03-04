@@ -1,0 +1,83 @@
+global:
+  resolve_timeout: 5m
+
+route:
+  receiver: default-receiver
+  group_by: ['alertname', 'cluster', 'service']
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+  routes:
+
+    # Critical in prod -> PagerDuty
+    - matchers:
+        - severity="critical"
+        - env="prod"
+      receiver: pagerduty
+      continue: false
+
+    # Warning -> Email generica
+    - matchers:
+        - severity="warning"
+      receiver: team-email
+      continue: true
+
+    # Team DB (mute di notte)
+    - matchers:
+        - team="db"
+      receiver: db-team
+      mute_time_intervals:
+        - night-shift
+
+    # Ambiente dev (mai notificato)
+    - matchers:
+        - env="dev"
+      receiver: dev-null
+      mute_time_intervals:
+        - always
+
+receivers:
+
+  - name: default-receiver
+    email_configs:
+      - to: ops@example.com
+
+  - name: pagerduty
+    pagerduty_configs:
+      - routing_key: "PAGERDUTY_KEY"
+
+  - name: team-email
+    email_configs:
+      - to: team@example.com
+
+  - name: db-team
+    email_configs:
+      - to: db@example.com
+
+  - name: dev-null
+    webhook_configs:
+      - url: http://localhost:5001/blackhole
+
+time_intervals:
+
+  - name: night-shift
+    time_intervals:
+      - weekdays: ['monday','tuesday','wednesday','thursday','friday']
+        times:
+          - start_time: '00:00'
+            end_time: '08:00'
+
+  - name: always
+    time_intervals:
+      - weekdays: ['monday','tuesday','wednesday','thursday','friday','saturday','sunday']
+        times:
+          - start_time: '00:00'
+            end_time: '24:00'
+
+inhibit_rules:
+  - source_matchers:
+      - severity="critical"
+    target_matchers:
+      - severity="warning"
+    equal: ['instance']
